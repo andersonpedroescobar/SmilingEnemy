@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Juego Final - El Giro Mortal</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #050505;
+            font-family: 'Segoe UI', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        #start-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+
+        #title-img {
+            max-width: 500px;
+            margin-bottom: 30px;
+            border: 4px solid #333;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+            border-radius: 10px;
+        }
+
+        .big-start-btn {
+            padding: 20px 50px;
+            font-size: 30px;
+            background: linear-gradient(45deg, #ff0000, #990000);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 0 15px #ff0000;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+        .big-start-btn:hover { transform: scale(1.1); box-shadow: 0 0 30px #ff4444; }
+
+        #menu-screen {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.95);
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        #levels-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-top: 30px;
+            max-width: 1000px;
+        }
+
+        .level-btn {
+            background: #222;
+            border: 2px solid #444;
+            color: white;
+            padding: 15px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.2s;
+            border-radius: 8px;
+            width: 120px;
+        }
+        .level-btn:hover { background: #444; border-color: #0f0; transform: scale(1.05); }
+        .boss-level { border-color: #ff0000; color: #ffaaaa; background: #330000; }
+        .final-level { border-color: #a020f0; color: #e0b0ff; background: #200020; box-shadow: 0 0 15px #a020f0; }
+        .angel-level { border-color: #ffd700; color: #ffffaa; background: #333300; box-shadow: 0 0 20px #ffd700; }
+
+        canvas {
+            border: 4px solid #333;
+            background-color: #000;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+
+        #ui-hud {
+            position: absolute;
+            top: 20px;
+            pointer-events: none;
+            text-align: center;
+            display: none;
+            text-shadow: 2px 2px 4px #000;
+            width: 100%;
+            z-index: 5;
+        }
+        h1 { margin: 0; color: #ff4444; }
+        #boss-warning {
+            color: red; font-weight: bold; font-size: 30px; display: none;
+            background-color: rgba(0,0,0,0.6); padding: 10px; border-radius: 5px;
+        }
+
+        #back-to-menu-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #444;
+            color: #fff;
+            border: 1px solid #aaa;
+            padding: 10px 15px;
+            cursor: pointer;
+            z-index: 60;
+            border-radius: 5px;
+            font-weight: bold;
+            display: none;
+        }
+        #back-to-menu-btn:hover { background: #666; border-color: #fff; }
+
+        #dialogue-box {
+            position: absolute;
+            bottom: 80px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #ffd700;
+            padding: 25px;
+            width: 700px;
+            text-align: center;
+            display: none;
+            z-index: 20;
+            border-radius: 10px;
+        }
+        #dialogue-text { font-size: 22px; color: #fff; font-family: 'Courier New', monospace; line-height: 1.5; }
+        #dialogue-hint { font-size: 14px; color: #aaa; margin-top: 10px; }
+        
+        #dialogue-portrait {
+            width: 100px; 
+            height: 100px; 
+            border: 3px solid #ffd700; 
+            border-radius: 50%;
+            position: absolute; 
+            top: -100px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            background: #000; 
+            object-fit: cover; 
+            display: none;
+            box-shadow: 0 0 15px #ffd700;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <img id="title-img" src="inicio.png" alt="Titulo del Juego">
+        <button class="big-start-btn" onclick="goToMenu()">INICIAR JUEGO</button>
+        <p style="color: #666; margin-top: 10px;">smiling enemy</p>
+    </div>
+
+    <div id="menu-screen">
+        <h1 style="font-size: 50px; color: #ff0000;">SELECCIONA NIVEL</h1>
+        <p>Usa WASD para moverte. <b>Apunta con el MOUSE</b> y CLIC o ESPACIO para disparar.</p>
+        <div id="levels-grid"></div>
+        <p style="color:#666; font-size: 12px; margin-top:20px;">Disfrutar del jueguito</p>
+    </div>
+
+    <div id="ui-hud">
+        <h1 id="level-title-display">NIVEL X</h1>
+        <p id="enemies-left">Enemigos: 0</p>
+        <div id="boss-warning">¡CUIDADO!</div>
+    </div>
+
+    <div id="dialogue-box">
+        <img id="dialogue-portrait" src="" alt="Speaker">
+        <div id="dialogue-text">...</div>
+        <div id="dialogue-hint">Presiona ESPACIO para continuar</div>
+    </div>
+
+    <button id="back-to-menu-btn" onclick="initMenu()">↩ Volver al Menú</button>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+    const spriteSources = {
+        inicio:      'inicio.png',
+        fondo:       'fondo.png',
+        paraiso:     'paraiso.png',
+        infierno:    'infierno.png',
+        player:      'jugador.png',
+        '360':       'enemigo1.png',
+        'giant':     'enemigo2.png',
+        'bouncer':   'enemigo3.png',
+        'healer':    'enemigo4.png',
+        'boss':      'boss.png',
+        'spider_boss': 'arana.png',
+        'skeleton_boss': 'esqueleto.png', 
+        'skeleton_boss2': 'esqueleto2.png',
+        'vortex_boss': 'vortex.png',
+        'angel': 'angel.png',       
+        'angel2': 'angel2.png',     
+        'angelcaido': 'angelcaido.png',   
+        'angelcaido2': 'angelcaido2.png', 
+        'angelcaido3': 'angelcaido3.png', 
+        'purple_sword': 'espada_morada.png',
+        'calabera': 'calabera.png' // NUEVO: Para el screamer y las balas
+    };
+
+    const loadedSprites = {};
+    function loadGameImages() {
+        for (let key in spriteSources) {
+            let img = new Image();
+            img.src = spriteSources[key];
+            loadedSprites[key] = img;
+        }
+    }
+    loadGameImages();
+
+    let walls = [];
+    let enemies = [];
+    let traps = []; 
+    let timeScale = 1.0; 
+    let darknessLevel = 0.0; 
+    let damageEffectTimer = 0; 
+    let screamerTimer = 0; // Timer para el susto
+    
+    let mouseX = 0;
+    let mouseY = 0;
+    let inDialogue = false;
+    let dialogueStep = 0;
+    let currentDialogues = [];
+    let divineAuraAlpha = 0; 
+    let flashEffectTimer = 0; 
+
+    // Variables Nivel 9 Rotación
+    let currentRotation = 0; // Rotación actual de la cámara
+    let targetRotation = 0;  // Rotación objetivo
+    let rotationTimer = 0;   // Contador para girar cada 25s
+
+    // Variables Nivel 8 y 9
+    let orbitalAngle = 0; 
+    let laserAngle = 0;
+    let level9State = 0; 
+    let cinematicTimer = 0;
+
+    function addWall(x, y, w, h, dx, isOrbital = false) { 
+        walls.push({ x, y, w, h, dx, dy: 0, color: '#555', isControlled: false, isOrbital: isOrbital, angleOffset: Math.random() * Math.PI * 2, distance: 180 }); 
+    }
+    
+    function addEnemy(x, y, type, color, hp) {
+        let size = 40;
+        if (type.includes('boss') || type.includes('angel')) size = 100;
+        if (type === 'skeleton_boss') size = 90;
+        if (type === 'purple_sword') size = 40;
+        if (type === 'giant') size = 60;
+        if (type === 'healer') size = 35;
+        
+        enemies.push({ x, y, width: size, height: size, color, hp, maxHp: hp, type, timer: Math.random() * 50 });
+    }
+
+    function addTrap(x, y, w, h) { traps.push({ x, y, w, h, revealed: false }); }
+
+    // --- NIVELES ---
+    const LEVELS = [
+        { title: "Nivel 1: El Comienzo", setup: () => { addWall(0, 300, 300, 20, 2); addWall(500, 400, 300, 20, -3); addEnemy(200, 100, '360', '#f00', 20); addEnemy(600, 100, 'giant', '#f80', 30); }},
+        { title: "Nivel 2: El Sanador", setup: () => { addWall(0, 250, 350, 20, 4); addWall(450, 450, 350, 20, -4); addEnemy(150, 80, '360', '#f00', 20); addEnemy(650, 80, 'giant', '#f80', 30); addEnemy(400, 50, 'healer', '#a0f', 40); }},
+        { title: "Nivel 3: Asedio", setup: () => { addWall(100, 200, 100, 20, 2); addEnemy(100, 100, 'giant', '#f80', 25); addEnemy(700, 100, 'giant', '#f80', 25); addEnemy(400, 50, 'healer', '#a0f', 30); }},
+        { title: "NIVEL 4: JEFE DE FUEGO", isBoss: true, setup: () => { addEnemy(400, 150, 'boss', '#800', 300); addEnemy(550, 150, 'giant', '#f80', 60); }},
+        { title: "Nivel 5: Rebotes", setup: () => { addWall(200, 100, 20, 300, 0); addWall(400, 200, 20, 300, 0); addEnemy(100, 100, 'bouncer', '#0cf', 25); addEnemy(700, 50, 'bouncer', '#0cf', 25); }},
+        { title: "NIVEL 6: LA ARAÑA", isBoss: true, setup: () => { addWall(150, 200, 60, 60, 0); addWall(590, 200, 60, 60, 0); addWall(370, 450, 60, 60, 0); addEnemy(350, 100, 'spider_boss', '#222', 675); }},
+        { title: "NIVEL 7: EL JUICIO FINAL", isBoss: true, setup: () => { addEnemy(350, 250, 'skeleton_boss', '#eebb99', 1500); addTrap(100, 100, 50, 50); addTrap(650, 100, 50, 50); addTrap(100, 500, 50, 50); addTrap(650, 500, 50, 50); addTrap(375, 50, 50, 50); }},
+        { title: "NIVEL 8: LA SINGULARIDAD", isBoss: true, setup: () => { addEnemy(350, 250, 'vortex_boss', '#4b0082', 1200); }},
+        { 
+            title: "NIVEL 9: DIVINIDAD CORRUPTA", 
+            isBoss: true, 
+            setup: () => {
+                addEnemy(350, 100, 'skeleton_boss', '#eebb99', 5000); 
+                level9State = 0; 
+                cinematicTimer = 0;
+                divineAuraAlpha = 0;
+            }
+        }
+    ];
+
+    // --- MOTOR ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('ui-hud');
+    const warningText = document.getElementById('boss-warning');
+    const dialogueBox = document.getElementById('dialogue-box');
+    const dialogueText = document.getElementById('dialogue-text');
+    const dialoguePortrait = document.getElementById('dialogue-portrait');
+    const backBtn = document.getElementById('back-to-menu-btn');
+    
+    let currentLevelIndex = 0;
+    let gameState = 'start'; 
+    let frameCount = 0;
+
+    const player = { x: 400, y: 550, width: 30, height: 30, color: '#00ff00', baseSpeed: 5, bullets: [], shotCount: 0, lives: 1, invulnerable: 0 };
+    let enemyBullets = [];
+    let particles = [];
+    const keys = {};
+    let bossSystem = { phase: 0, timer: 0, rotation: 0, safeZone: { x: 0, w: 0 }, fireActive: false };
+
+    // Mouse Tracking
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+    });
+    canvas.addEventListener('mousedown', (e) => { if (gameState === 'playing' && !inDialogue) shoot(); });
+
+    function goToMenu() { document.getElementById('start-screen').style.display = 'none'; initMenu(); }
+
+    function initMenu() {
+        gameState = 'menu';
+        document.getElementById('menu-screen').style.display = 'flex';
+        hud.style.display = 'none';
+        backBtn.style.display = 'none';
+        dialogueBox.style.display = 'none';
+        const grid = document.getElementById('levels-grid');
+        grid.innerHTML = '';
+        LEVELS.forEach((level, index) => {
+            let btn = document.createElement('button');
+            btn.className = 'level-btn';
+            if(level.isBoss) btn.classList.add('boss-level');
+            if(index === 6 || index === 7) btn.classList.add('final-level');
+            if(index === 8) btn.classList.add('angel-level');
+            btn.innerText = `Nivel ${index+1}`;
+            btn.onclick = () => startLevel(index);
+            grid.appendChild(btn);
+        });
+    }
+
+    function startLevel(index) {
+        if (index >= LEVELS.length) { alert("¡JUEGO COMPLETADO! Eres una leyenda."); initMenu(); return; }
+        currentLevelIndex = index;
+        gameState = 'playing';
+        document.getElementById('menu-screen').style.display = 'none';
+        hud.style.display = 'block';
+        backBtn.style.display = 'block';
+        warningText.style.display = 'none';
+        dialogueBox.style.display = 'none';
+        
+        player.x = 400; player.y = 550; player.bullets = []; player.shotCount = 0;
+        player.invulnerable = 0; damageEffectTimer = 0; screamerTimer = 0;
+        orbitalAngle = 0; laserAngle = 0; divineAuraAlpha = 0; flashEffectTimer = 0;
+        
+        // Reset rotación
+        currentRotation = 0; targetRotation = 0; rotationTimer = 0;
+        
+        if (index >= 6) player.lives = 2; else player.lives = 1;
+
+        enemies = []; walls = []; enemyBullets = []; particles = []; traps = [];
+        frameCount = 0; timeScale = 1.0; darknessLevel = 0.0;
+        bossSystem = { phase: 0, timer: 0, rotation: 0, safeZone: {x:0, w:0}, fireActive: false };
+
+        level9State = 0;
+
+        const levelData = LEVELS[index];
+        document.getElementById('level-title-display').innerText = levelData.title;
+        levelData.setup();
+
+        if (index === 6) {
+            startDialogue(["Felicidades por pasar el tutorial...", "Ahora te daré una vida extra...", "Veamos si con eso eres capaz de vencerme."], 'skeleton_boss');
+        } else { inDialogue = false; }
+    }
+
+    function startDialogue(lines, speaker) {
+        inDialogue = true;
+        dialogueStep = 0;
+        currentDialogues = lines;
+        dialogueBox.style.display = 'block';
+        dialogueText.innerText = currentDialogues[0];
+        
+        let portraitSrc = "";
+        if(speaker === 'skeleton_boss') portraitSrc = spriteSources['skeleton_boss'];
+        if(speaker === 'angel') portraitSrc = spriteSources['angel2'] || spriteSources['angel'];
+        if(speaker === 'angelcaido') portraitSrc = spriteSources['angelcaido'];
+        
+        if(portraitSrc) {
+            dialoguePortrait.src = portraitSrc;
+            dialoguePortrait.style.display = 'block';
+        } else {
+            dialoguePortrait.style.display = 'none';
+        }
+    }
+
+    window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if (inDialogue && e.code === 'Space') {
+            dialogueStep++;
+            if (dialogueStep < currentDialogues.length) {
+                dialogueText.innerText = currentDialogues[dialogueStep];
+            } else { 
+                inDialogue = false; 
+                dialogueBox.style.display = 'none';
+                
+                // === LÓGICA CLAVE DE TRANSICIÓN FASE 2 ===
+                if (currentLevelIndex === 8 && level9State === 8) {
+                    level9State = 9; 
+                    let boss = enemies.find(e => e.type === 'angelcaido2');
+                    if(boss) {
+                        boss.type = 'angelcaido3';
+                        boss.hp = 4000;
+                        boss.maxHp = 4000;
+                        particles.push({x: boss.x, y: boss.y, text: "¡TRANSFORMACIÓN!", life: 60});
+                        
+                        // LIMPIEZA DE ENEMIGOS FASE 1
+                        enemies = enemies.filter(e => e.type === 'angelcaido3'); // Borra espadas y otros
+                        
+                        // ACTIVAR SCREAMER
+                        screamerTimer = 60; // 1 Segundo de Screamer
+                        flashEffectTimer = 120; // 2 segundos parpadeo
+                    }
+                }
+            }
+        }
+    });
+    window.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+        if (e.code === 'Space' && gameState === 'playing' && !inDialogue) shoot();
+        if (e.code === 'Enter') { if (gameState === 'gameover') startLevel(currentLevelIndex); if (gameState === 'victory') startLevel(currentLevelIndex + 1); }
+        if (e.code === 'Escape') initMenu();
+    });
+
+    function shoot() {
+        // CORRECCIÓN PUNTERÍA CON ROTACIÓN
+        let center = { x: 400, y: 300 };
+        // Convertir mouse a relativo del centro
+        let rx = mouseX - center.x;
+        let ry = mouseY - center.y;
+        // Rotar inversamente
+        let unrotatedX = rx * Math.cos(-currentRotation) - ry * Math.sin(-currentRotation);
+        let unrotatedY = rx * Math.sin(-currentRotation) + ry * Math.cos(-currentRotation);
+        // Coordenada real en el mundo del juego
+        let worldMouseX = unrotatedX + center.x;
+        let worldMouseY = unrotatedY + center.y;
+
+        let angle = Math.atan2(worldMouseY - (player.y + player.height/2), worldMouseX - (player.x + player.width/2));
+        
+        player.shotCount++;
+        let speed = 12;
+        if (player.shotCount >= 10) {
+            player.bullets.push({ x: player.x+10, y: player.y+10, w: 15, h: 15, color: '#00ffff', dx: Math.cos(angle)*(speed+2), dy: Math.sin(angle)*(speed+2), damage: 5 });
+            player.shotCount = 0; particles.push({x: player.x, y: player.y, text: "¡MAX!", life: 40});
+        } else {
+            player.bullets.push({ x: player.x+10, y: player.y+10, w: 5, h: 5, color: '#ffff00', dx: Math.cos(angle)*speed, dy: Math.sin(angle)*speed, damage: 1 });
+        }
+    }
+
+    function hitPlayer() {
+        if (player.invulnerable > 0) return; 
+        player.lives--;
+        if (player.lives > 0) {
+            player.invulnerable = 120; damageEffectTimer = 30;    
+            particles.push({x: player.x, y: player.y - 20, text: "¡VIDA PERDIDA!", life: 60});
+            player.x = 100; player.y = 500;
+        } else { gameState = 'gameover'; }
+    }
+
+    function update() {
+        if (gameState !== 'playing') return;
+        
+        if (currentLevelIndex === 8) {
+            if (level9State === 0) {
+                cinematicTimer++;
+                if (cinematicTimer > 180) { 
+                    level9State = 1;
+                    divineAuraAlpha = 0;
+                    addEnemy(400, -100, 'angel', '#fff', 9999); 
+                }
+            }
+            else if (level9State === 1) {
+                if (divineAuraAlpha < 0.6) divineAuraAlpha += 0.01; 
+                let angel = enemies.find(e => e.type === 'angel');
+                if (angel) {
+                    angel.y += 2; 
+                    if (angel.y >= 150) {
+                        level9State = 2;
+                        startDialogue(["Soy el gran Uriel, Caballero Sagrado.", "He venido a purgar esta oscuridad.", "Prepárate para ser salvado, mortal."], 'angel');
+                    }
+                }
+            }
+            else if (level9State === 2) {
+                if (!inDialogue) {
+                    level9State = 3; 
+                    startDialogue(["¡Cállate de una vez, estorbo alado!"], 'skeleton_boss');
+                }
+            }
+            else if (level9State === 3) {
+                if (!inDialogue) {
+                    level9State = 4;
+                    cinematicTimer = 0;
+                }
+            }
+            else if (level9State === 4) {
+                cinematicTimer++;
+                if (cinematicTimer === 30) {
+                    particles.push({x: 400, y: 300, text: "¡IMPACTO!", life: 60});
+                    damageEffectTimer = 10; 
+                }
+                if (cinematicTimer === 60) {
+                    let angel = enemies.find(e => e.type === 'angel');
+                    if (angel) angel.type = 'angelcaido';
+                    divineAuraAlpha = 0; 
+                }
+                if (cinematicTimer > 100) {
+                    level9State = 5;
+                    startDialogue(["Ahora veremos si puedes con este supuesto héroe.", "Jajajaja..."], 'skeleton_boss');
+                }
+            }
+            else if (level9State === 5) {
+                if (!inDialogue) {
+                    level9State = 6;
+                    enemies = enemies.filter(e => e.type !== 'skeleton_boss');
+                    flashEffectTimer = 120; 
+                }
+            }
+            else if (level9State === 6) {
+                flashEffectTimer--;
+                if (flashEffectTimer <= 0) {
+                    let boss = enemies.find(e => e.type === 'angelcaido');
+                    if (boss) {
+                        boss.type = 'angelcaido2';
+                        boss.hp = 1000; // FASE 1: 1000 VIDA
+                        boss.maxHp = 1000;
+                        level9State = 7; 
+                        enemyBullets = [];
+                        warningText.style.display = 'block';
+                        warningText.innerText = "¡ÁNGEL CAÍDO!";
+                        setTimeout(()=>warningText.style.display='none', 2000);
+                    }
+                }
+            }
+            // FASE 2: ROTACIÓN DE CÁMARA
+            else if (level9State === 9) {
+                if (screamerTimer > 0) screamerTimer--;
+                
+                // Lógica de Rotación cada 25 segundos
+                rotationTimer++;
+                if (rotationTimer > 1500) { // 25s * 60fps = 1500
+                    targetRotation += Math.PI / 2; // +90 grados
+                    rotationTimer = 0;
+                    particles.push({x: 400, y: 300, text: "¡GIRO!", life: 60});
+                }
+                // Suavizar rotación
+                currentRotation += (targetRotation - currentRotation) * 0.05;
+            }
+        }
+
+        if (inDialogue) return; 
+
+        frameCount++;
+        if (player.invulnerable > 0) player.invulnerable--;
+        if (damageEffectTimer > 0) damageEffectTimer--;
+
+        let currentSpeed = player.baseSpeed * timeScale;
+        if (keys['ArrowUp'] || keys['KeyW']) player.y -= currentSpeed;
+        if (keys['ArrowDown'] || keys['KeyS']) player.y += currentSpeed;
+        if (keys['ArrowLeft'] || keys['KeyA']) player.x -= currentSpeed;
+        if (keys['ArrowRight'] || keys['KeyD']) player.x += currentSpeed;
+
+        enemies.forEach(e => {
+            if (e.type === 'vortex_boss') {
+                let dx = (e.x + e.width/2) - (player.x + player.width/2);
+                let dy = (e.y + e.height/2) - (player.y + player.height/2);
+                let dist = Math.hypot(dx, dy);
+                let g = (e.hp < e.maxHp * 0.3) ? -2.5 : 1.8;
+                if (dist > 10) { player.x += (dx/dist)*g; player.y += (dy/dist)*g; }
+                if (rectIntersect(player.x, player.y, player.width, player.height, e.x+20, e.y+20, e.width-40, e.height-40)) {
+                    player.x -= (dx/dist)*50; player.y -= (dy/dist)*50; hitPlayer();
+                }
+            }
+        });
+
+        player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+        player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
+
+        traps.forEach(t => { if (rectIntersect(player.x, player.y, player.width, player.height, t.x, t.y, t.w, t.h) && !t.revealed) { t.revealed = true; hitPlayer(); } });
+
+        orbitalAngle += 0.02; 
+        walls.forEach(w => {
+            if (w.isOrbital) {
+                w.x = 400 + Math.cos(orbitalAngle + w.angleOffset) * w.distance - w.w/2;
+                w.y = 300 + Math.sin(orbitalAngle + w.angleOffset) * w.distance - w.h/2;
+            } else {
+                let wallSpeed = w.isControlled ? w.dx : w.dx * timeScale;
+                let wallSpeedY = w.isControlled ? w.dy : w.dy * timeScale;
+                w.x += wallSpeed; w.y += wallSpeedY;
+                if (!w.isControlled) { if (w.x <= 0 || w.x + w.w >= canvas.width) w.dx *= -1; } 
+                else { if (w.x <= 0 || w.x + w.w >= canvas.width) w.dx *= -1; if (w.y <= 0 || w.y + w.h >= canvas.height) w.dy *= -1; }
+            }
+            if (rectIntersect(player.x, player.y, player.width, player.height, w.x, w.y, w.w, w.h)) {
+                if (w.isControlled && (Math.abs(w.dx) > 4 || Math.abs(w.dy) > 4)) hitPlayer();
+                let centersDiffX = (player.x + player.width/2) - (w.x + w.w/2);
+                let centersDiffY = (player.y + player.height/2) - (w.y + w.h/2);
+                if(Math.abs(centersDiffX) > Math.abs(centersDiffY)) { player.x = centersDiffX > 0 ? w.x + w.w + 1 : w.x - player.width - 1; } 
+                else { player.y = centersDiffY > 0 ? w.y + w.h + 1 : w.y - player.height - 1; }
+            }
+        });
+
+        enemies.forEach(e => {
+            e.timer += timeScale; 
+            
+            // --- BOSS 9 FASE 1 ---
+            if (e.type === 'angelcaido2') { 
+                e.x = 350 + Math.sin(frameCount/60) * 150;
+
+                if (frameCount % 180 === 0) {
+                    let angle = Math.atan2(player.y - e.y, player.x - e.x);
+                    let sword = spawnBulletDir(e.x+45, e.y+45, angle, 15, 8, '#ffd700');
+                    sword.isFrag = true; 
+                    sword.timer = 60; 
+                }
+
+                if (frameCount % 250 === 0) {
+                    addEnemy(e.x, e.y, 'purple_sword', '#aa00aa', 20);
+                }
+            }
+            // --- BOSS 9 FASE 2 ---
+            else if (e.type === 'angelcaido3' && level9State === 9) { 
+                if (frameCount % 400 === 0) {
+                    for(let i=0; i<4; i++) {
+                        let dummy = { x: Math.random()*700, y: Math.random()*400, width: 90, height: 90, type: 'angelcaido3', color: '#555', hp: 1, maxHp: 1, isDummy: true, timer: 0 };
+                        enemies.push(dummy);
+                    }
+                    warningText.style.display='block'; warningText.innerText="¿CUÁL ES EL REAL?";
+                    setTimeout(() => warningText.style.display='none', 2000);
+                }
+
+                if (frameCount % 10 === 0) {
+                    let angle = Math.random() * Math.PI * 2;
+                    let bullet = spawnBulletDir(e.x+45, e.y+45, angle, 10, 5, '#555555'); 
+                    bullet.isSkull = true; // MARCAR COMO CALAVERA
+                }
+
+                if (frameCount % 120 === 0) {
+                    let safeX = player.x; 
+                    for (let x = 0; x < canvas.width; x += 100) {
+                        if (Math.abs(x - safeX) > 120) {
+                            let bullet = spawnBulletDir(x, 0, Math.PI/2, 20, 10, '#ffffff'); 
+                            bullet.isSkull = true;
+                        }
+                    }
+                }
+                
+                if (frameCount % 60 === 0) {
+                    e.x = Math.random() * 700;
+                    e.y = Math.random() * 300;
+                }
+            }
+            // --- MINIBOSS ESPADA MORADA ---
+            else if (e.type === 'purple_sword') {
+                let dx = player.x - e.x;
+                let dy = player.y - e.y;
+                let dist = Math.hypot(dx, dy);
+                e.x += (dx/dist) * 3;
+                e.y += (dy/dist) * 3;
+                if (rectIntersect(player.x, player.y, player.width, player.height, e.x, e.y, e.width, e.height)) {
+                    hitPlayer(); e.hp = 0; 
+                }
+            }
+            
+            // --- OTROS BOSSES ---
+            else if (e.type === 'boss') {
+                bossSystem.timer++;
+                if (bossSystem.timer > 400) { bossSystem.phase = (bossSystem.phase + 1) % 2; bossSystem.timer = 0; bossSystem.fireActive = false; warningText.style.display = 'none'; if (bossSystem.phase === 1) bossSystem.safeZone = { x: Math.random()*(canvas.width*0.88), w: canvas.width*0.12 }; }
+                if (bossSystem.phase === 0) { bossSystem.rotation += 0.05 * timeScale; if (frameCount % 5 === 0) for(let i=0;i<360;i+=45) spawnBulletDir(e.x+e.width/2, e.y+e.height/2, (i*Math.PI/180)+bossSystem.rotation, 5, 4, '#ff5555'); }
+                if (bossSystem.phase === 1) {
+                    if (bossSystem.timer < 240) { warningText.style.display = 'block'; warningText.innerText = "¡ZONA VERDE!"; warningText.style.color='yellow'; } 
+                    else if (bossSystem.timer < 350) { bossSystem.fireActive = true; warningText.innerText = "¡QUEMANDO!"; warningText.style.color = 'white'; let pcx = player.x + player.width/2; if (pcx < bossSystem.safeZone.x || pcx > bossSystem.safeZone.x + bossSystem.safeZone.w) hitPlayer(); } 
+                    else { bossSystem.fireActive = false; warningText.style.display = 'none'; }
+                }
+            } else if (e.type === 'spider_boss') {
+                 let cycleTimer = frameCount % 3600;
+                 if (cycleTimer < 1200) { e.x = 350 + Math.sin(frameCount / 40) * 250; if (frameCount % 30 === 0) for(let i=0; i<360; i+=20) { let b = spawnBulletDir(e.x+45, e.y+45, i*Math.PI/180, 7, 5, '#0f0'); b.bounces=2; } } 
+                 else if (cycleTimer < 2400) { if(cycleTimer === 1200) warningText.style.display='none'; e.x += (350 - e.x)*0.05; let localT = cycleTimer - 1200; if(localT === 200) { warningText.style.display='block'; warningText.innerText="¡CAJAS!"; } if(localT === 300) { walls.forEach(w=>{ let a=Math.atan2(player.y-w.y, player.x-w.x); w.isControlled=true; w.dx=Math.cos(a)*9; w.dy=Math.sin(a)*9; }); warningText.style.display='none'; } } 
+                 else { e.x += Math.sin(frameCount/20)*4; e.y+=Math.cos(frameCount/25)*2; if(frameCount%25===0) spawnBullet(e, player, 10, 10, '#fff'); }
+            } else if (e.type === 'skeleton_boss' && currentLevelIndex !== 8) { 
+                e.hp -= 0.25; if (e.hp <= 0) { enemies = []; return; } 
+                let cycle = frameCount % 1300;
+                if (cycle < 400) { timeScale = 1.0; darknessLevel = 0.0; warningText.style.display = 'none'; e.x = 350 + Math.sin(frameCount/50) * 200; e.y = 100 + Math.sin(frameCount/30) * 50; if (frameCount % 20 === 0) { let angleToP = Math.atan2(player.y - e.y, player.x - e.x); for(let i=-1.5; i<=1.5; i+=1) spawnBulletDir(e.x+45, e.y+45, angleToP + (i*0.2), 6, 6, '#ddd'); } } 
+                else if (cycle < 900) { timeScale = 0.2; warningText.style.display = 'block'; warningText.innerText = "DESINCRONIZADO"; warningText.style.color = '#00ffff'; e.x += Math.sin(frameCount/10) * 10; e.y += Math.cos(frameCount/10) * 5; if (frameCount % 10 === 0) spawnBullet(e, player, 8, 25, '#aa00ff'); } 
+                else if (cycle < 1100) { timeScale = 0.05; darknessLevel = 1.0; warningText.style.display = 'none'; if (cycle === 905) enemyBullets = []; let targetX = player.x - 100; e.x += (targetX - e.x) * 0.1; e.y += (player.y - e.y) * 0.1; } 
+                else { timeScale = 1.0; darknessLevel = 0.0; if (cycle === 1100) { for(let i=0; i<360; i+=10) spawnBulletDir(e.x+45, e.y+45, i*Math.PI/180, 8, 8, '#ff0000'); player.y += 100; } e.x += (player.x - e.x) * 0.08; e.y += (player.y - e.y) * 0.08; }
+            } else if (e.type === 'vortex_boss') {
+                let cycle = frameCount % 3600;
+                if (cycle < 1200) { warningText.style.display = 'none'; if (cycle === 0) walls = walls.filter(w => !w.isOrbital); let sub = Math.floor((cycle % 600) / 300); if (sub === 0) { if (frameCount % 8 === 0) { spawnBulletDir(e.x+50, e.y+50, (frameCount*8)*Math.PI/180, 5, 5, '#aa00aa'); spawnBulletDir(e.x+50, e.y+50, ((frameCount*8)+180)*Math.PI/180, 5, 5, '#aa00aa'); } } else { if (frameCount % 6 === 0) { let b = spawnBulletDir(e.x+50, e.y+50, Math.random()*Math.PI*2, 7, 7, '#ff00ff'); b.bounces = 1; } } }
+                else if (cycle < 2400) { if (cycle === 1200) { warningText.style.display = 'block'; warningText.innerText = "¡ESCUDOS ACTIVOS!"; addWall(0,0, 50, 50, 0, true); addWall(0,0, 50, 50, 0, true); addWall(0,0, 50, 50, 0, true); addWall(0,0, 50, 50, 0, true); walls.forEach((w, i) => { if(w.isOrbital) w.angleOffset = (Math.PI/2) * i; }); } if (frameCount % 45 === 0) spawnBullet(e, player, 8, 6, '#ffffff'); }
+                else { if (cycle === 2400) walls = walls.filter(w => !w.isOrbital); warningText.innerText = "¡HUYE DEL LÁSER!"; warningText.style.color = "red"; laserAngle += 0.015; let pCX = player.x+player.width/2; let pCY = player.y+player.height/2; let bCX = e.x+e.width/2; let bCY = e.y+e.height/2; let angP = Math.atan2(pCY-bCY, pCX-bCX); let normL = (laserAngle%(Math.PI*2)); if(normL<0) normL+=Math.PI*2; let normP = angP; if(normP<0) normP+=Math.PI*2; let diff = Math.abs(normL-normP); if(diff>Math.PI) diff = 2*Math.PI-diff; if(diff<0.15) hitPlayer(); }
+            } else if (e.type !== 'angel' && e.type !== 'angelcaido' && e.type !== 'skeleton_boss') {
+                // Enemigos normales
+                let moveScale = timeScale;
+                e.y += Math.sin(frameCount / 40 + e.x) * 0.5 * moveScale;
+                if (e.type === 'bouncer' && e.timer > 100) { let angle = Math.atan2(player.y - e.y, player.x - e.x); let b = spawnBulletDir(e.x + e.width/2, e.y + e.height/2, angle, 6, 5, '#00ccff'); b.bounces = 3; e.timer = 0; }
+                else if (e.type === 'healer' && e.timer > 120) { spawnBullet(e, player, 6, 7, '#aa00ff'); enemies.forEach(friend => { if(friend !== e && !friend.isDummy) friend.hp = Math.min(friend.hp + 2, friend.maxHp); }); particles.push({x: e.x, y: e.y, text: "CURANDO", life: 30}); e.timer = 0; }
+                else if (e.type === 'giant' && e.timer > 180) { spawnBullet(e, player, 25, 4, '#ff4400'); e.timer = 0; }
+                else if (e.type === '360' && e.timer > 120) { for(let i=0; i<360; i+=45) { spawnBulletDir(e.x+e.width/2, e.y+e.height/2, i*Math.PI/180, 4, 3, '#ffaaaa'); } e.timer = 0; }
+            }
+        });
+
+        // Limpiar dummies muertos
+        enemies = enemies.filter(e => e.hp > 0);
+
+        updatePlayerBullets();
+        updateEnemyBullets();
+        particles.forEach((p, i) => { p.y--; p.life--; if(p.life<=0) particles.splice(i,1); });
+
+        // --- CORRECCIÓN VICTORIA NIVEL 1-8 ---
+        if (enemies.length === 0) {
+            if (currentLevelIndex === 8) {
+                if (level9State === 9) gameState = 'victory';
+            } else {
+                if (level9State === 0) gameState = 'victory';
+            }
+        }
+        
+        document.getElementById('enemies-left').innerText = "Enemigos: " + enemies.length;
+    }
+
+    function draw() {
+        if(gameState === 'menu' || gameState === 'start') return;
+
+        // --- ROTACIÓN DE PANTALLA (FASE 2 NIVEL 9) ---
+        ctx.save(); 
+        
+        // Temblor
+        if (damageEffectTimer > 0 || screamerTimer > 0) { 
+            let intensity = (screamerTimer > 0) ? 10 : 20;
+            let shakeX = (Math.random() - 0.5) * intensity; 
+            let shakeY = (Math.random() - 0.5) * intensity; 
+            ctx.translate(shakeX, shakeY); 
+        }
+
+        // Rotación
+        ctx.translate(canvas.width/2, canvas.height/2);
+        ctx.rotate(currentRotation);
+        ctx.translate(-canvas.width/2, -canvas.height/2);
+
+        // DIBUJAR FONDO DINÁMICO NIVEL 9
+        let bgImage = loadedSprites.fondo;
+        if (currentLevelIndex === 8) {
+            if (level9State === 0) bgImage = loadedSprites.fondo;
+            else if (level9State < 4) {
+                if (loadedSprites.paraiso && loadedSprites.paraiso.complete) bgImage = loadedSprites.paraiso;
+            } else {
+                if (loadedSprites.infierno && loadedSprites.infierno.complete) bgImage = loadedSprites.infierno;
+            }
+        }
+
+        if (bgImage && bgImage.complete && bgImage.naturalWidth !== 0) { ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height); } 
+        else { ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+
+        // AURA DIVINA (NIVEL 9)
+        if (divineAuraAlpha > 0) {
+            ctx.fillStyle = `rgba(255, 255, 200, ${divineAuraAlpha})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Rayo Cinemática
+        if (currentLevelIndex === 8 && level9State === 4) {
+            let skel = enemies.find(e => e.type === 'skeleton_boss');
+            let angel = enemies.find(e => e.type === 'angel') || enemies.find(e => e.type === 'angelcaido');
+            if (skel && angel) {
+                ctx.beginPath();
+                ctx.moveTo(skel.x+45, skel.y+45);
+                ctx.lineTo(angel.x+45, angel.y+45);
+                ctx.strokeStyle = '#550055';
+                ctx.lineWidth = 10 + Math.random()*10;
+                ctx.stroke();
+            }
+        }
+
+        // Efecto Parpadeo Nivel 9 (Flash)
+        if (flashEffectTimer > 0) {
+            if (Math.floor(flashEffectTimer / 5) % 2 === 0) {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // Láser Boss 8
+        enemies.forEach(e => {
+            if (e.type === 'vortex_boss' && (frameCount % 3600) >= 2400) {
+                let bossCX = e.x + e.width/2; let bossCY = e.y + e.height/2;
+                let endX = bossCX + Math.cos(laserAngle) * 800; let endY = bossCY + Math.sin(laserAngle) * 800;
+                ctx.beginPath(); ctx.moveTo(bossCX, bossCY); ctx.lineTo(endX, endY);
+                ctx.strokeStyle = 'red'; ctx.lineWidth = 10; ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(bossCX, bossCY); ctx.lineTo(endX, endY);
+                ctx.strokeStyle = '#ffaaaa'; ctx.lineWidth = 4; ctx.stroke();
+            }
+        });
+
+        if (bossSystem.phase === 1 && enemies.some(e => e.type === 'boss')) {
+            ctx.fillStyle = bossSystem.fireActive ? 'rgba(255, 50, 0, 0.6)' : 'rgba(80, 0, 0, 0.6)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = bossSystem.fireActive ? 'rgba(0, 255, 0, 0.5)' : 'rgba(0, 70, 0, 0.5)';
+            ctx.fillRect(bossSystem.safeZone.x, 0, bossSystem.safeZone.w, canvas.height);
+        }
+
+        let gracePeriod = (currentLevelIndex === 6 && frameCount < 120);
+        traps.forEach(t => {
+            if (t.revealed || gracePeriod) {
+                ctx.fillStyle = gracePeriod ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 0, 0, 0.6)';
+                ctx.fillRect(t.x, t.y, t.w, t.h);
+                ctx.strokeStyle = gracePeriod ? '#fff' : 'red'; ctx.strokeRect(t.x, t.y, t.w, t.h);
+                if(gracePeriod) { ctx.fillStyle = '#fff'; ctx.font='10px Arial'; ctx.fillText("TRAMPA", t.x + 5, t.y + 25); }
+            }
+        });
+
+        walls.forEach(w => { ctx.fillStyle = w.color; ctx.fillRect(w.x, w.y, w.w, w.h); ctx.strokeStyle='#aaa'; ctx.strokeRect(w.x,w.y,w.w,w.h); });
+        
+        if (gameState !== 'gameover') { 
+            if (player.invulnerable === 0 || Math.floor(frameCount / 4) % 2 === 0) {
+                let pImg = loadedSprites.player;
+                if (pImg && pImg.complete && pImg.naturalWidth !== 0) { ctx.drawImage(pImg, player.x, player.y, player.width, player.height); } 
+                else { ctx.fillStyle = player.color; ctx.fillRect(player.x, player.y, player.width, player.height); }
+            }
+            ctx.strokeStyle = 'red'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(mouseX, mouseY, 10, 0, Math.PI*2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(mouseX-15, mouseY); ctx.lineTo(mouseX+15, mouseY); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(mouseX, mouseY-15); ctx.lineTo(mouseX, mouseY+15); ctx.stroke();
+
+            let barW = 40; let barH = 5; let barX = player.x - 5; let barY = player.y + player.height + 5;
+            ctx.fillStyle = '#333'; ctx.fillRect(barX, barY, barW, barH);
+            let fillPct = Math.min(player.shotCount / 10, 1);
+            ctx.fillStyle = (fillPct >= 1) ? '#00ffff' : '#ffff00'; 
+            ctx.fillRect(barX, barY, barW * fillPct, barH);
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
+            
+            // --- CORAZONES MEJORADOS ---
+            ctx.save();
+            ctx.font = '40px Arial'; 
+            ctx.fillStyle = '#ff0000'; // Corazón rojo
+            ctx.strokeStyle = '#000000'; // Borde negro grueso
+            ctx.lineWidth = 6;
+            ctx.lineJoin = "round";
+            let hearts = ""; for(let i=0; i<player.lives; i++) hearts += "❤️ "; 
+            
+            // Dibujar borde primero
+            ctx.strokeText(hearts, 30, 80);
+            // Dibujar relleno encima
+            ctx.fillText(hearts, 30, 80);
+            ctx.restore();
+        }
+
+        enemies.forEach(e => {
+            let enemyImg = loadedSprites[e.type];
+            // Fallbacks
+            if (!enemyImg || !enemyImg.complete) {
+                if (e.type.includes('angel')) enemyImg = loadedSprites['boss']; 
+                if (e.type === 'purple_sword') enemyImg = null; 
+            }
+
+            if (enemyImg && enemyImg.complete && enemyImg.naturalWidth !== 0) { 
+                if(e.isDummy) ctx.globalAlpha = 0.6;
+                ctx.drawImage(enemyImg, e.x, e.y, e.width, e.height); 
+                ctx.globalAlpha = 1.0;
+            } else { 
+                ctx.fillStyle = e.color; ctx.fillRect(e.x, e.y, e.width, e.height); 
+            }
+            
+            if (!e.isDummy && level9State !== 1 && level9State !== 2) {
+                let pct = Math.max(0, e.hp / e.maxHp);
+                ctx.fillStyle = 'red'; ctx.fillRect(e.x, e.y - 10, e.width, 5);
+                ctx.fillStyle = '#0f0'; ctx.fillRect(e.x, e.y - 10, e.width * pct, 5);
+            }
+        });
+
+        player.bullets.forEach(b => { ctx.fillStyle = b.color; ctx.fillRect(b.x, b.y, b.w, b.h); });
+        enemyBullets.forEach(b => { 
+            // DIBUJAR CALAVERA SI ES BALA DE FASE 2
+            if (b.isSkull && loadedSprites.calabera && loadedSprites.calabera.complete) {
+                ctx.drawImage(loadedSprites.calabera, b.x - 10, b.y - 10, 20, 20);
+            } else {
+                ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2); 
+                ctx.fillStyle = b.color; ctx.fill(); 
+                if(b.bounces > 0) { ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.stroke(); }
+            }
+        });
+
+        if (darknessLevel > 0) {
+            ctx.fillStyle = `rgba(0, 0, 0, ${darknessLevel})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            enemies.forEach(e => {
+                if (e.type === 'skeleton_boss') {
+                    ctx.fillStyle = 'red';
+                    ctx.beginPath(); ctx.arc(e.x + 35, e.y + 30, 4, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(e.x + 55, e.y + 30, 4, 0, Math.PI*2); ctx.fill();
+                }
+            });
+        }
+
+        if (damageEffectTimer > 0) { ctx.fillStyle = 'rgba(255, 0, 0, 0.4)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        
+        ctx.restore(); // FIN DE ROTACIÓN DE MUNDO
+        
+        // --- COSAS QUE NO DEBEN ROTAR (UI EXTREMA, SCREAMER) ---
+        
+        // SCREAMER
+        if (screamerTimer > 0) {
+            if (loadedSprites.calabera && loadedSprites.calabera.complete) {
+                ctx.drawImage(loadedSprites.calabera, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = "white";
+                ctx.font = "100px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("💀", canvas.width/2, canvas.height/2);
+            }
+        }
+
+        ctx.fillStyle = '#0f0'; ctx.font='14px Arial'; particles.forEach(p => ctx.fillText(p.text, p.x, p.y));
+
+        if (gameState === 'gameover') drawOverlay("GAME OVER", "Enter para reintentar", "red");
+        if (gameState === 'victory') drawOverlay("¡NIVEL COMPLETADO!", "Enter para siguiente nivel", "#0f0");
+    }
+
+    function spawnBullet(origin, target, size, speed, color) {
+        let angle = Math.atan2(target.y - origin.y, target.x - origin.x);
+        return spawnBulletDir(origin.x + origin.width/2, origin.y + origin.height/2, angle, size, speed, color);
+    }
+    function spawnBulletDir(x, y, angle, size, speed, color) {
+        let b = { x, y, radius: size, dx: Math.cos(angle)*speed, dy: Math.sin(angle)*speed, color, bounces: 0 };
+        enemyBullets.push(b);
+        return b;
+    }
+    
+    function updatePlayerBullets() {
+        for (let i = player.bullets.length - 1; i >= 0; i--) {
+            let b = player.bullets[i]; 
+            b.x += (b.dx || 0) * timeScale; b.y += (b.dy || 0) * timeScale; 
+            let hit = false;
+            walls.forEach(w => { if (rectIntersect(b.x, b.y, b.w, b.h, w.x, w.y, w.w, w.h)) hit = true; });
+            if (!hit) {
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    let e = enemies[j];
+                    if (rectIntersect(b.x, b.y, b.w, b.h, e.x, e.y, e.width, e.height)) {
+                        e.hp -= (b.damage || 1); 
+                        hit = true; 
+                        if (e.hp <= 0) {
+                            if(e.isDummy) {
+                                particles.push({x: e.x, y: e.y, text: "ILUSIÓN", life: 30});
+                                enemies.splice(j, 1);
+                            } else if (e.type !== 'skeleton_boss' && e.type !== 'angelcaido2') {
+                                // Enemigos normales
+                                enemies.splice(j, 1); 
+                            } else if (e.type === 'angelcaido2') {
+                                // --- TRANSICIÓN FASE 2 ---
+                                if (level9State !== 8) { // Asegurar que no se repita
+                                    level9State = 8; 
+                                    startDialogue(["¡Ahora sí me hiciste enojar!"], 'angelcaido');
+                                    enemyBullets = []; 
+                                    e.hp = 9999; // Inmortalidad temporal
+                                }
+                            } else if (currentLevelIndex === 8 && e.type === 'skeleton_boss') {
+                                e.hp = 5000;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            if (b.y < 0 || b.y > canvas.height || b.x < 0 || b.x > canvas.width || hit) player.bullets.splice(i, 1);
+        }
+    }
+
+    function updateEnemyBullets() {
+        for (let i = enemyBullets.length - 1; i >= 0; i--) {
+            let b = enemyBullets[i]; 
+            if (b.isFrag) {
+                b.timer--;
+                if (b.timer <= 0) {
+                    for(let k=0; k<360; k+=30) spawnBulletDir(b.x, b.y, k*Math.PI/180, 5, 5, '#ffd700');
+                    enemyBullets.splice(i, 1);
+                    continue;
+                }
+            }
+            b.x += b.dx * timeScale; b.y += b.dy * timeScale;
+            let hitWall = false;
+            for (let w of walls) {
+                if (rectIntersect(b.x - b.radius, b.y - b.radius, b.radius*2, b.radius*2, w.x, w.y, w.w, w.h)) {
+                    hitWall = true;
+                    if (b.bounces > 0) {
+                        let prevX = b.x - b.dx * timeScale;
+                        if (prevX + b.radius <= w.x || prevX - b.radius >= w.x + w.w) b.dx *= -1; else b.dy *= -1;
+                        b.bounces--; b.x += b.dx * timeScale; b.y += b.dy * timeScale;
+                    } else enemyBullets.splice(i, 1);
+                    break;
+                }
+            }
+            if (!hitWall) {
+                if (Math.hypot(b.x-(player.x+player.width/2), b.y-(player.y+player.height/2)) < b.radius + player.width/2.5) hitPlayer();
+                if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) enemyBullets.splice(i, 1);
+            }
+        }
+    }
+
+    function drawOverlay(t, s, c) {
+        ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = c; ctx.font='bold 40px Arial'; ctx.textAlign='center'; ctx.fillText(t, 400, 280);
+        ctx.fillStyle = 'white'; ctx.font='20px Arial'; ctx.fillText(s, 400, 330);
+    }
+    function rectIntersect(x1, y1, w1, h1, x2, y2, w2, h2) { return x2 < x1 + w1 && x2 + w2 > x1 && y2 < y1 + h1 && y2 + h2 > y1; }
+
+    function loop() { update(); draw(); requestAnimationFrame(loop); }
+    loop();
+</script>
+</body>
+</html>
